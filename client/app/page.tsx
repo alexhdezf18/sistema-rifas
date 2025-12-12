@@ -1,65 +1,84 @@
-import Image from "next/image";
+import { Raffle } from "@/types/raffles";
 
-export default function Home() {
+// Función para pedir datos al Backend
+async function getRaffles(): Promise<Raffle[]> {
+  // Nota: Usamos 'no-store' para que NO guarde caché y siempre muestre datos frescos
+  const res = await fetch("http://localhost:3000/raffles", {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error("Fallo al obtener las rifas");
+  }
+
+  return res.json();
+}
+
+export default async function Home() {
+  // Aquí ocurre la magia: Esperamos los datos antes de dibujar la página
+  const raffles = await getRaffles();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-6xl mx-auto">
+        <header className="mb-10">
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+            Sorteos Disponibles
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-gray-500 mt-2">
+            Elige tu número de la suerte y gana premios increíbles.
           </p>
+        </header>
+
+        {/* GRID DE TARJETAS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {raffles.map((raffle) => (
+            <div
+              key={raffle.id}
+              className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
+            >
+              {/* Encabezado de la tarjeta (Color aleatorio simulado con degradado) */}
+              <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                <span className="text-white font-bold text-2xl opacity-90">
+                  🏆
+                </span>
+              </div>
+
+              <div className="p-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-2">
+                  {raffle.name}
+                </h2>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  {raffle.description || "Sin descripción disponible"}
+                </p>
+
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-400 uppercase font-semibold">
+                      Boleto
+                    </span>
+                    <span className="text-lg font-bold text-green-600">
+                      ${raffle.ticketPrice}
+                    </span>
+                  </div>
+                  <button className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                    Ver Boletos
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        {/* Mensaje si no hay rifas */}
+        {raffles.length === 0 && (
+          <div className="text-center py-20">
+            <p className="text-gray-500 text-lg">
+              No hay sorteos activos en este momento.
+            </p>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
