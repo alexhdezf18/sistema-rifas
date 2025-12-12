@@ -1,0 +1,75 @@
+// server/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// MODELO DE LA RIFA
+model Raffle {
+  id                String   @id @default(uuid()) // Usamos UUID para que los IDs sean seguros y no adivinables (ej. 'a1b2-c3d4...')
+  name              String
+  description       String?  @db.Text
+  slug              String   @unique // Para la URL bonita: misitio.com/rifa-iphone
+  
+  ticketPrice       Decimal  @db.Decimal(10, 2) // Precio por boleto
+  totalTickets      Int      // Cantidad total de boletos (ej. 100, 60000)
+  opportunities     Int      @default(1) // Cuántas oportunidades extra por boleto
+  
+  startDate         DateTime @default(now())
+  endDate           DateTime?
+  
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relación: Una rifa tiene muchos tickets vendidos/apartados
+  tickets           Ticket[]
+}
+
+// MODELO DE CLIENTES
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String   @unique // El teléfono es su identificador clave
+  state     String?  // Estado de la república (opcional)
+  
+  createdAt DateTime @default(now())
+  
+  // Relación: Un cliente puede tener muchos tickets
+  tickets   Ticket[]
+}
+
+// MODELO DE TICKETS (Solo guardamos los ocupados)
+model Ticket {
+  id             String        @id @default(uuid())
+  
+  // El número de boleto "Padre". Si compras el 05, aquí guardamos 5.
+  ticketNumber   Int           
+  
+  status         TicketStatus  @default(RESERVED)
+  
+  // Si no pagan en X horas, usamos este campo para saber cuándo liberarlo
+  reservedAt     DateTime      @default(now())
+  paidAt         DateTime?     // Fecha cuando mandaron el comprobante
+
+  // Relaciones
+  raffleId       String
+  raffle         Raffle        @relation(fields: [raffleId], references: [id])
+  
+  clientId       String
+  client         Client        @relation(fields: [clientId], references: [id])
+
+  // Un constraint compuesto: No puede haber dos tickets con el mismo número en la misma rifa
+  @@unique([raffleId, ticketNumber])
+}
+
+// ENUM: Solo permitimos estos estados
+enum TicketStatus {
+  RESERVED  // Apartado (Amarillo)
+  PAID      // Pagado (Rojo/Ocupado)
+}

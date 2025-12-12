@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  # Servicio de Base de Datos
+  db:
+    image: postgres:15-alpine # Usamos una versión ligera (Alpine) de Postgres
+    container_name: rifas_db # Nombre para identificarlo fácil en Docker Desktop
+    restart: always # Si se cae o reinicias la compu, que arranque solo
+    ports:
+      - "5432:5432" # El puerto 5432 de tu compu conecta al 5432 del contenedor
+    environment:
+      POSTGRES_USER: user # Usuario maestro
+      POSTGRES_PASSWORD: password # Contraseña maestra
+      POSTGRES_DB: rifas_db # Nombre de la base de datos que creará
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Esto es VITAL: Guarda los datos en tu disco duro para que no se borren al apagar docker
+
+volumes:
+  postgres_data: # Definimos el volumen persistente
