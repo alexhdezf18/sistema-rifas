@@ -82,6 +82,21 @@ export class TicketsService {
     });
   }
 
+  // Obtener solo los números ocupados de una rifa
+  async getOccupiedTickets(raffleId: string) {
+    const tickets = await this.prisma.ticket.findMany({
+      where: {
+        raffleId: raffleId,
+        status: { in: ['RESERVED', 'PAID'] }, // Buscamos apartados o pagados
+      },
+      select: { ticketNumber: true }, // Solo traeme el numerito, no necesito más datos
+    });
+
+    // Convertimos la respuesta compleja [{ticketNumber: 5}, {ticketNumber: 8}]
+    // A un array simple: [5, 8]
+    return tickets.map((t) => t.ticketNumber);
+  }
+
   findAll() {
     return `This action returns all tickets`;
   }

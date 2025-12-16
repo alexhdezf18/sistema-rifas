@@ -1,6 +1,6 @@
-"use client"; // Le dice a Next.js que aquí sí hay interactividad
+"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Raffle } from "@/types/raffles";
 
 interface Props {
@@ -8,17 +8,35 @@ interface Props {
 }
 
 export default function TicketSelector({ raffle }: Props) {
-  // Estados de la aplicación (Memoria a corto plazo)
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
+  const [occupiedNumbers, setOccupiedNumbers] = useState<number[]>([]); // <--- Nuevo estado
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Generar lista de números (esto después vendrá del backend para saber cuáles están ocupados)
+  // Generar lista de números
   const totalToShow = Math.min(raffle.totalTickets, 500);
   const numbers = Array.from({ length: totalToShow }, (_, i) => i);
 
-  // Función para seleccionar/deseleccionar
+  // 1. CARGAR NÚMEROS OCUPADOS AL INICIO
+  useEffect(() => {
+    const fetchOccupied = async () => {
+      try {
+        const res = await fetch(
+          `http://localhost:3000/tickets/occupied/${raffle.id}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setOccupiedNumbers(data); // Guardamos la lista negra: [5, 20, 99...]
+        }
+      } catch (error) {
+        console.error("Error cargando tickets ocupados:", error);
+      }
+    };
+
+    fetchOccupied();
+  }, [raffle.id]); // Se ejecuta cada vez que cambia la rifa
+
   const toggleNumber = (num: number) => {
     if (selectedNumbers.includes(num)) {
       setSelectedNumbers(selectedNumbers.filter((n) => n !== num));
@@ -27,7 +45,6 @@ export default function TicketSelector({ raffle }: Props) {
     }
   };
 
-  // Función para enviar la compra al Backend
   const handleReserve = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedNumbers.length === 0) return;
@@ -54,14 +71,15 @@ export default function TicketSelector({ raffle }: Props) {
         alert(
           `¡Éxito! Has apartado los números: ${selectedNumbers.join(", ")}`
         );
-        // Limpiar formulario y selección
+        // Actualizamos visualmente los ocupados agregando los que acabamos de comprar
+        setOccupiedNumbers([...occupiedNumbers, ...selectedNumbers]);
+
         setSelectedNumbers([]);
         setClientName("");
         setClientPhone("");
       }
     } catch (error) {
       alert("Error de conexión con el servidor");
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -73,20 +91,24 @@ export default function TicketSelector({ raffle }: Props) {
         Selecciona tus boletos 🎟️
       </h2>
 
-      {/* 1. LA CUADRÍCULA INTERACTIVA */}
       <div className="grid grid-cols-5 md:grid-cols-10 gap-2 mb-8">
         {numbers.map((num) => {
           const isSelected = selectedNumbers.includes(num);
+          const isOccupied = occupiedNumbers.includes(num); // <--- ¿Está vendido?
+
           return (
             <button
               key={num}
+              disabled={isOccupied} // <--- Bloquear clic si está ocupado
               onClick={() => toggleNumber(num)}
               className={`
                 aspect-square border-2 rounded-lg flex items-center justify-center font-bold transition-all
                 ${
-                  isSelected
-                    ? "bg-yellow-400 border-yellow-500 text-black scale-95 shadow-inner" // Estilo Seleccionado
-                    : "border-gray-200 text-gray-600 hover:border-blue-500 hover:bg-blue-50" // Estilo Normal
+                  isOccupied
+                    ? "bg-red-100 border-red-200 text-red-300 cursor-not-allowed line-through" // Estilo OCUPADO (Rojo tachado)
+                    : isSelected
+                    ? "bg-yellow-400 border-yellow-500 text-black scale-95 shadow-inner" // Estilo SELECCIONADO
+                    : "border-gray-200 text-gray-600 hover:border-blue-500 hover:bg-blue-50" // Estilo DISPONIBLE
                 }
               `}
             >
@@ -96,7 +118,6 @@ export default function TicketSelector({ raffle }: Props) {
         })}
       </div>
 
-      {/* 2. EL PANEL DE COMPRA (Solo aparece si seleccionas algo) */}
       {selectedNumbers.length > 0 && (
         <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 animate-fade-in">
           <h3 className="font-bold text-lg mb-4 text-gray-800">

@@ -25,6 +25,11 @@ export class TicketsController {
     return this.ticketsService.findAll();
   }
 
+  @Get('occupied/:raffleId')
+  getOccupied(@Param('raffleId') raffleId: string) {
+    return this.ticketsService.getOccupiedTickets(raffleId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.ticketsService.findOne(+id);
