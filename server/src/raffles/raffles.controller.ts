@@ -25,6 +25,11 @@ export class RafflesController {
     return this.rafflesService.findAll();
   }
 
+  @Get('slug/:slug')
+  findBySlug(@Param('slug') slug: string) {
+    return this.rafflesService.findOneBySlug(slug);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.rafflesService.findOne(id);

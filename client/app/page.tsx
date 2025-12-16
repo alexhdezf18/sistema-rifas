@@ -1,4 +1,5 @@
 import { Raffle } from "@/types/raffles";
+import Link from "next/link";
 
 // Función para pedir datos al Backend
 async function getRaffles(): Promise<Raffle[]> {
@@ -61,9 +62,12 @@ export default async function Home() {
                       ${raffle.ticketPrice}
                     </span>
                   </div>
-                  <button className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                  <Link
+                    href={`/rifa/${raffle.slug}`}
+                    className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors inline-block text-center"
+                  >
                     Ver Boletos
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>

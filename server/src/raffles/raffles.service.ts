@@ -22,6 +22,13 @@ export class RafflesService {
     });
   }
 
+  // Buscar una rifa por su URL amigable (Slug)
+  async findOneBySlug(slug: string) {
+    return this.prisma.raffle.findUnique({
+      where: { slug }, // Busca en la columna 'slug'
+    });
+  }
+
   findAll() {
     return this.prisma.raffle.findMany(); // Devuelve todas las rifas
   }
