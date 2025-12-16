@@ -15,6 +15,18 @@ import { UpdateTicketDto } from './dto/update-ticket.dto';
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
+  // Obtener lista completa de tickets de una rifa
+  @Get('raffle/:raffleId')
+  findAllByRaffle(@Param('raffleId') raffleId: string) {
+    return this.ticketsService.findAllByRaffle(raffleId);
+  }
+
+  // Marcar un ticket específico como pagado
+  @Patch(':id/pay')
+  markAsPaid(@Param('id') id: string) {
+    return this.ticketsService.markAsPaid(id);
+  }
+
   @Post()
   create(@Body() createTicketDto: CreateTicketDto) {
     return this.ticketsService.create(createTicketDto);

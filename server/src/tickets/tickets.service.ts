@@ -97,6 +97,26 @@ export class TicketsService {
     return tickets.map((t) => t.ticketNumber);
   }
 
+  // Obtener todos los tickets de una rifa con datos del cliente
+  async findAllByRaffle(raffleId: string) {
+    return this.prisma.ticket.findMany({
+      where: { raffleId },
+      include: { client: true }, // Esto trae los datos del cliente asociado
+      orderBy: { ticketNumber: 'asc' }, // Ordenados del 0 al 100...
+    });
+  }
+
+  // Marcar como pagado
+  async markAsPaid(id: string) {
+    return this.prisma.ticket.update({
+      where: { id },
+      data: {
+        status: 'PAID',
+        paidAt: new Date(), // Guardamos la fecha exacta del pago
+      },
+    });
+  }
+
   findAll() {
     return `This action returns all tickets`;
   }
