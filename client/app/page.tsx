@@ -1,32 +1,45 @@
 import { Raffle } from "@/types/raffles";
 import Link from "next/link";
 
-// Función para obtener las rifas con manejo de errores
 async function getRaffles(): Promise<Raffle[]> {
-  // 1. Obtenemos la URL y nos aseguramos de que no sea undefined
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  let apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
 
-  console.log("INTENTANDO CONECTAR A:", apiUrl); // <--- Esto saldría en los logs de Vercel
+  // --- LIMPIEZA PROFUNDA DE LA VARIABLE ---
+
+  // 1. Quitar comillas simples o dobles si las hubiera
+  apiUrl = apiUrl.replace(/['"]+/g, "");
+
+  // 2. Quitar espacios al inicio y al final
+  apiUrl = apiUrl.trim();
+
+  // 3. Quitar barra al final si existe
+  if (apiUrl.endsWith("/")) {
+    apiUrl = apiUrl.slice(0, -1);
+  }
+
+  // 4. Si después de limpiar no empieza con http, se lo ponemos
+  if (apiUrl && !apiUrl.startsWith("http")) {
+    apiUrl = `https://${apiUrl}`;
+  }
+
+  // --- FIN LIMPIEZA ---
+
+  console.log("URL FINAL LIMPIA:", apiUrl); // Mira esto en los logs si falla
 
   if (!apiUrl) {
-    console.error("ERROR CRÍTICO: La variable NEXT_PUBLIC_API_URL no existe.");
     return [];
   }
 
   try {
-    // 2. Hacemos el fetch
     const res = await fetch(`${apiUrl}/raffles`, {
       cache: "no-store",
     });
 
-    if (!res.ok) {
-      console.error(`Error del servidor: ${res.status} ${res.statusText}`);
-      return [];
-    }
+    if (!res.ok) return [];
 
     return await res.json();
   } catch (error) {
-    console.error("Error de conexión:", error);
+    console.error("Error fetching raffles:", error);
     return [];
   }
 }
@@ -41,8 +54,7 @@ export default async function Home() {
           Grandes Rifas, Grandes Premios 🎁
         </h1>
         <p className="text-xl opacity-80 max-w-2xl mx-auto">
-          Participa en nuestras rifas exclusivas y gana premios increíbles.
-          Selecciona tu número de la suerte hoy mismo.
+          Participa y gana premios increíbles.
         </p>
       </div>
 
@@ -54,10 +66,7 @@ export default async function Home() {
         {raffles.length === 0 ? (
           <div className="text-center p-10 bg-white rounded-lg shadow">
             <p className="text-gray-500 text-lg">
-              No hay rifas activas en este momento o hubo un error de conexión.
-            </p>
-            <p className="text-xs text-gray-400 mt-2">
-              (Revisa los logs de Vercel para ver la URL)
+              Cargando rifas o no hay disponibles...
             </p>
           </div>
         ) : (
@@ -75,15 +84,12 @@ export default async function Home() {
                   <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
                     {raffle.name}
                   </h3>
-                  <p className="text-gray-600 line-clamp-2 mb-4 text-sm">
-                    {raffle.description}
-                  </p>
                   <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
                     <span className="bg-green-100 text-green-700 py-1 px-3 rounded-full text-sm font-bold">
-                      ${raffle.ticketPrice} / boleto
+                      ${raffle.ticketPrice}
                     </span>
-                    <span className="text-blue-600 font-semibold group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                      Ver boletos &rarr;
+                    <span className="text-blue-600 font-semibold">
+                      Ver &rarr;
                     </span>
                   </div>
                 </div>
