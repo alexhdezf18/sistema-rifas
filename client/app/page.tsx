@@ -4,7 +4,7 @@ import Link from "next/link";
 // Función para pedir datos al Backend
 async function getRaffles(): Promise<Raffle[]> {
   // Nota: Usamos 'no-store' para que NO guarde caché y siempre muestre datos frescos
-  const res = await fetch("http://localhost:3000/raffles", {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/raffles`, {
     cache: "no-store",
   });
 
