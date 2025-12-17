@@ -73,3 +73,14 @@ enum TicketStatus {
   RESERVED  // Apartado (Amarillo)
   PAID      // Pagado (Rojo/Ocupado)
 }
+
+// MODELO DE USUARIOS (Administradores)
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Aquí se guardará el hash encriptado
+  name      String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
