@@ -30,12 +30,36 @@ export default function AdminDashboard({
   }, [params]);
 
   // Cargar datos
+  // Cargar datos
   const fetchTickets = async () => {
     if (!raffleId) return;
+
+    // 1. Recuperamos el token
+    const token = localStorage.getItem("adminToken");
+
+    // Si no hay token, no tiene caso intentar (o podrías redirigir al login)
+    if (!token) {
+      console.error("No hay token de administrador");
+      return;
+    }
+
     try {
       const res = await fetch(
-        `http://localhost:3000/tickets/raffle/${raffleId}`
+        `http://localhost:3000/tickets/raffle/${raffleId}`,
+        {
+          // 2. AGREGAMOS EL HEADER DE AUTORIZACIÓN AQUÍ TAMBIÉN
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
+
+      if (res.status === 401) {
+        alert("Tu sesión expiró. Por favor inicia sesión de nuevo.");
+        // Opcional: window.location.href = '/login';
+        return;
+      }
+
       if (res.ok) {
         const data = await res.json();
         setTickets(data);
@@ -55,17 +79,34 @@ export default function AdminDashboard({
   const handleMarkPaid = async (ticketId: string) => {
     if (!confirm("¿Confirmar que recibiste el pago de este boleto?")) return;
 
+    // RECUPERAR EL TOKEN
+    const token = localStorage.getItem("adminToken");
+
+    if (!token) {
+      alert("No tienes sesión iniciada. Ve a /login");
+      return;
+    }
+
     try {
       const res = await fetch(`http://localhost:3000/tickets/${ticketId}/pay`, {
         method: "PATCH",
+        headers: {
+          // AQUÍ ENVIAMOS LA LLAVE
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (res.ok) {
         alert("Pago registrado exitosamente");
-        fetchTickets(); // Recargar la tabla
+        fetchTickets();
+      } else {
+        // Si el token expiró o es inválido
+        if (res.status === 401)
+          alert("Tu sesión expiró. Vuelve a hacer login.");
+        else alert("Error al actualizar");
       }
     } catch (error) {
-      alert("Error al actualizar");
+      alert("Error de conexión");
     }
   };
 
