@@ -45,7 +45,7 @@ export default function AdminDashboard({
 
     try {
       const res = await fetch(
-        `http://localhost:3000/tickets/raffle/${raffleId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tickets/raffle/${raffleId}`,
         {
           // 2. AGREGAMOS EL HEADER DE AUTORIZACIÓN AQUÍ TAMBIÉN
           headers: {
@@ -88,13 +88,16 @@ export default function AdminDashboard({
     }
 
     try {
-      const res = await fetch(`http://localhost:3000/tickets/${ticketId}/pay`, {
-        method: "PATCH",
-        headers: {
-          // AQUÍ ENVIAMOS LA LLAVE
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/tickets/${ticketId}/pay`,
+        {
+          method: "PATCH",
+          headers: {
+            // AQUÍ ENVIAMOS LA LLAVE
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (res.ok) {
         alert("Pago registrado exitosamente");

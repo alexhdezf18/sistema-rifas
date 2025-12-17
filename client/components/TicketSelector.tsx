@@ -23,7 +23,7 @@ export default function TicketSelector({ raffle }: Props) {
     const fetchOccupied = async () => {
       try {
         const res = await fetch(
-          `http://localhost:3000/tickets/occupied/${raffle.id}`
+          `${process.env.NEXT_PUBLIC_API_URL}/tickets/occupied/${raffle.id}`
         );
         if (res.ok) {
           const data = await res.json();
@@ -52,7 +52,7 @@ export default function TicketSelector({ raffle }: Props) {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3000/tickets", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tickets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

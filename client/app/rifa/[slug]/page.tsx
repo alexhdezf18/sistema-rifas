@@ -8,7 +8,7 @@ async function getRaffle(slug: string): Promise<Raffle | null> {
     // Codificamos el slug por si tiene espacios o caracteres raros
     const cleanSlug = encodeURIComponent(slug);
     const res = await fetch(
-      `http://localhost:3000/tickets/../raffles/slug/${cleanSlug}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/tickets/../raffles/slug/${cleanSlug}`,
       {
         // Ojo: usa la URL normal http://localhost:3000/raffles/slug/...
         cache: "no-store",
@@ -17,7 +17,7 @@ async function getRaffle(slug: string): Promise<Raffle | null> {
     // Corrijo la URL aquí abajo para evitar confusión, usa la misma que tenías antes
     // Fetch real:
     const resReal = await fetch(
-      `http://localhost:3000/raffles/slug/${cleanSlug}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/raffles/slug/${cleanSlug}`,
       { cache: "no-store" }
     );
 
