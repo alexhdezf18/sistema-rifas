@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Raffle } from "@/types/raffles";
+import { toast } from "sonner";
 
 interface Props {
   raffle: Raffle;
@@ -52,9 +53,14 @@ export default function TicketSelector({ raffle }: Props) {
 
   const handleReserve = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedNumbers.length === 0) return;
+    if (selectedNumbers.length === 0) {
+      toast.warning("Selecciona al menos un boleto"); // Aviso suave
+      return;
+    }
 
     setLoading(true);
+    // Un toast de carga que se quitará cuando termine
+    const toastId = toast.loading("Apartando tus boletos...");
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tickets`, {
@@ -71,26 +77,34 @@ export default function TicketSelector({ raffle }: Props) {
       const data = await res.json();
 
       if (!res.ok) {
-        alert("Error: " + (data.message || "No se pudo reservar"));
+        // Error del servidor (ej. boleto ya ocupado)
+        toast.error(data.message || "No se pudo reservar", {
+          id: toastId, // Reemplaza al loading
+        });
       } else {
-        // --- ÉXITO: Preparamos el Modal ---
+        // --- ÉXITO ---
+        toast.success("¡Boletos apartados con éxito!", {
+          id: toastId, // Reemplaza al loading
+          duration: 4000, // Dura 4 segundos
+        });
+
+        // Preparamos el Modal (esto sigue igual)
         const total = selectedNumbers.length * Number(raffle.ticketPrice);
         setLastReservedNumbers(selectedNumbers);
         setLastTotal(total);
 
-        // Actualizamos visualmente
         setOccupiedNumbers([...occupiedNumbers, ...selectedNumbers]);
 
-        // Limpiamos formulario
         setSelectedNumbers([]);
         setClientName("");
         setClientPhone("");
 
-        // ¡ABRIMOS EL MODAL!
         setShowPaymentModal(true);
       }
     } catch (error) {
-      alert("Error de conexión con el servidor");
+      toast.error("Error de conexión. Intenta de nuevo.", {
+        id: toastId,
+      });
     } finally {
       setLoading(false);
     }
