@@ -12,20 +12,19 @@ export default function CreateRafflePage() {
     name: "",
     slug: "",
     description: "",
+    imageUrl: "",
     ticketPrice: "",
     totalTickets: "",
     startDate: "",
     endDate: "",
   });
 
-  // Actualiza los campos y auto-genera el slug si cambias el nombre
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
 
     if (name === "name") {
-      // Crear slug automático: "Gran Rifa" -> "gran-rifa"
       const slug = value
         .toLowerCase()
         .replace(/ /g, "-")
@@ -42,11 +41,8 @@ export default function CreateRafflePage() {
     setError("");
 
     try {
-      // 1. CORRECCIÓN AQUÍ: Cambiar 'token' por 'adminToken'
       const token = localStorage.getItem("adminToken");
-
       if (!token) {
-        // Si no hay token, te manda al login
         router.push("/login");
         return;
       }
@@ -63,23 +59,18 @@ export default function CreateRafflePage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // Aquí usa el token correcto
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        // Si el servidor responde 401 (No autorizado), es que el token venció
-        if (res.status === 401) {
-          router.push("/login");
-          return;
-        }
         const errorData = await res.json();
         throw new Error(errorData.message || "Error al crear la rifa");
       }
 
       alert("¡Rifa creada con éxito!");
-      router.push("/admin"); // Te regresa al dashboard principal
+      router.push("/admin");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -89,9 +80,9 @@ export default function CreateRafflePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+      <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Nueva Rifa 🎟️</h2>
+          <h2 className="text-3xl font-bold text-gray-900">Nueva Rifa 📸</h2>
           <p className="text-gray-500 mt-2">
             Completa los detalles para lanzar una nueva rifa.
           </p>
@@ -116,7 +107,7 @@ export default function CreateRafflePage() {
                 required
                 value={formData.name}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 outline-none"
                 placeholder="Ej. iPhone 15 Pro"
               />
             </div>
@@ -135,6 +126,40 @@ export default function CreateRafflePage() {
             </div>
           </div>
 
+          {/* URL de Imagen (NUEVA SECCIÓN) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              URL de la Imagen (Opcional)
+            </label>
+            <input
+              type="url"
+              name="imageUrl"
+              value={formData.imageUrl}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 outline-none"
+              placeholder="https://i.imgur.com/..."
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Pega aquí el link directo de la imagen (debe terminar en .jpg,
+              .png, etc.)
+            </p>
+
+            {/* PREVISUALIZACIÓN DE LA IMAGEN */}
+            {formData.imageUrl && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600 mb-2">Vista previa:</p>
+                <div className="relative w-full h-64 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                  <img
+                    src={formData.imageUrl}
+                    alt="Previsualización"
+                    className="w-full h-full object-cover"
+                    onError={(e) => (e.currentTarget.style.display = "none")} // Si falla el link, se oculta
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Descripción */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -146,8 +171,8 @@ export default function CreateRafflePage() {
               rows={3}
               value={formData.description}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none"
-              placeholder="Detalles del premio y condiciones..."
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 outline-none"
+              placeholder="Detalles del premio..."
             />
           </div>
 
@@ -164,7 +189,7 @@ export default function CreateRafflePage() {
                 min="1"
                 value={formData.ticketPrice}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 outline-none"
               />
             </div>
             <div>
@@ -178,7 +203,7 @@ export default function CreateRafflePage() {
                 min="10"
                 value={formData.totalTickets}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 outline-none"
               />
             </div>
           </div>
@@ -195,7 +220,7 @@ export default function CreateRafflePage() {
                 required
                 value={formData.startDate}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 outline-none"
               />
             </div>
             <div>
@@ -208,13 +233,13 @@ export default function CreateRafflePage() {
                 required
                 value={formData.endDate}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 outline-none"
               />
             </div>
           </div>
 
           {/* Botones */}
-          <div className="flex justify-end gap-4 pt-4">
+          <div className="flex justify-end gap-4 pt-4 border-t border-gray-100">
             <button
               type="button"
               onClick={() => router.back()}
@@ -225,9 +250,9 @@ export default function CreateRafflePage() {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium"
             >
-              {loading ? "Creando..." : "Crear Rifa"}
+              {loading ? "Guardando..." : "Crear Rifa"}
             </button>
           </div>
         </form>

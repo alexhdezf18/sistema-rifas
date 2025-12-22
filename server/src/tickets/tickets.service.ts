@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { PrismaService } from '../prisma.service';
 
@@ -14,8 +18,25 @@ export class TicketsService {
     return await this.prisma.$transaction(async (tx) => {
       // Verificar que la rifa existe y está activa
       const raffle = await tx.raffle.findUnique({ where: { id: raffleId } });
-      if (!raffle || !raffle.isActive) {
-        throw new BadRequestException('La rifa no existe o ya finalizó.');
+
+      // Verificamos si la rifa existe Y si la fecha actual está dentro del rango permitido
+      if (!raffle) {
+        throw new NotFoundException('La rifa no existe');
+      }
+
+      // Verificamos que las fechas existan
+      if (!raffle.startDate || !raffle.endDate) {
+        throw new BadRequestException(
+          'La rifa no tiene fechas configuradas correctamente',
+        );
+      }
+
+      // Ahora sí, validamos el rango de tiempo
+      const now = new Date();
+      if (now < raffle.startDate || now > raffle.endDate) {
+        throw new BadRequestException(
+          'Esta rifa no está activa en este momento',
+        );
       }
 
       // Verificar que los números estén dentro del rango (ej. no pedir el 105 si son 100 boletos)

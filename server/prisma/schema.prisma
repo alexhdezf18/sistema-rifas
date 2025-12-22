@@ -11,24 +11,18 @@ datasource db {
 
 // MODELO DE LA RIFA
 model Raffle {
-  id                String   @id @default(uuid()) // Usamos UUID para que los IDs sean seguros y no adivinables (ej. 'a1b2-c3d4...')
-  name              String
-  description       String?  @db.Text
-  slug              String   @unique // Para la URL bonita: misitio.com/rifa-iphone
-  
-  ticketPrice       Decimal  @db.Decimal(10, 2) // Precio por boleto
-  totalTickets      Int      // Cantidad total de boletos (ej. 100, 60000)
-  opportunities     Int      @default(1) // Cuántas oportunidades extra por boleto
-  
-  startDate         DateTime @default(now())
-  endDate           DateTime?
-  
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  // Relación: Una rifa tiene muchos tickets vendidos/apartados
-  tickets           Ticket[]
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  description  String
+  imageUrl     String?  // <--- ¡AGREGA ESTA LÍNEA! (El ? significa opcional)
+  ticketPrice  Decimal
+  totalTickets Int
+  startDate    DateTime
+  endDate      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tickets      Ticket[]
 }
 
 // MODELO DE CLIENTES
