@@ -4,8 +4,11 @@ export interface Raffle {
   description?: string;
   imageUrl?: string;
   slug: string;
-  ticketPrice: string;
+  ticketPrice: number;
   totalTickets: number;
   opportunities: number;
   isActive: boolean;
+  _count?: {
+    tickets: number;
+  };
 }

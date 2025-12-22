@@ -29,8 +29,17 @@ export class RafflesService {
     });
   }
 
-  findAll() {
-    return this.prisma.raffle.findMany(); // Devuelve todas las rifas
+  async findAll() {
+    return this.prisma.raffle.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        _count: {
+          select: { tickets: true }, //CUENTA LOS BOLETOS VENDIDOS/APARTADOS
+        },
+      },
+    });
   }
 
   findOne(id: string) {
