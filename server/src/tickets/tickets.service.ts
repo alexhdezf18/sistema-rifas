@@ -138,6 +138,27 @@ export class TicketsService {
     });
   }
 
+  async findByPhone(phone: string) {
+    const cleanPhone = phone.replace(/\D/g, '');
+
+    return this.prisma.ticket.findMany({
+      where: {
+        client: {
+          phone: {
+            contains: cleanPhone,
+          },
+        },
+      },
+      include: {
+        raffle: true,
+        client: true,
+      },
+      orderBy: {
+        ticketNumber: 'asc',
+      },
+    });
+  }
+
   findAll() {
     return `This action returns all tickets`;
   }

@@ -36,6 +36,11 @@ export class TicketsController {
     return this.ticketsService.create(createTicketDto);
   }
 
+  @Get('search/:phone')
+  findByPhone(@Param('phone') phone: string) {
+    return this.ticketsService.findByPhone(phone);
+  }
+
   @Get()
   findAll() {
     return this.ticketsService.findAll();

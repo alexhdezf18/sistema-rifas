@@ -27,7 +27,16 @@ export default async function LandingPage() {
           <div className="text-2xl font-black text-blue-600 tracking-tighter">
             TU RIFA
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-center">
+            {/* --- NUEVO LINK --- */}
+            <Link
+              href="/verificar"
+              className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              🔍 Mis Boletos
+            </Link>
+            {/* ------------------ */}
+
             <Link
               href="/login"
               className="text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2"
