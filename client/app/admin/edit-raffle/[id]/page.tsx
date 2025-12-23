@@ -29,7 +29,6 @@ export default function EditRafflePage() {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // Cargar datos
   useEffect(() => {
     const fetchRaffle = async () => {
       // @ts-ignore

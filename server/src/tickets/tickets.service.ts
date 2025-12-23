@@ -159,6 +159,61 @@ export class TicketsService {
     });
   }
 
+  // ... imports y otras funciones ...
+
+  async createMany(data: {
+    raffleId: string;
+    clientName: string;
+    clientPhone: string;
+    ticketNumbers: number[];
+  }) {
+    // 1. Verificar si alguno ya está ocupado
+    const existingTickets = await this.prisma.ticket.findMany({
+      where: {
+        raffleId: data.raffleId,
+        ticketNumber: { in: data.ticketNumbers },
+      },
+    });
+
+    if (existingTickets.length > 0) {
+      const occupied = existingTickets.map((t) => t.ticketNumber).join(', ');
+      throw new Error(
+        `Los boletos ${occupied} ya fueron ganados por alguien más.`,
+      );
+    }
+
+    // 2. Buscar o crear el cliente
+    let client = await this.prisma.client.findFirst({
+      where: { phone: data.clientPhone },
+    });
+
+    if (!client) {
+      client = await this.prisma.client.create({
+        data: {
+          name: data.clientName,
+          phone: data.clientPhone,
+        },
+      });
+    }
+
+    // 3. Crear los boletos en transacción (todos o ninguno)
+    // Usamos un bucle de promesas para crear las relaciones correctamente
+    const result = await this.prisma.$transaction(
+      data.ticketNumbers.map((num) =>
+        this.prisma.ticket.create({
+          data: {
+            ticketNumber: num,
+            status: 'RESERVED',
+            raffleId: data.raffleId,
+            clientId: client.id,
+          },
+        }),
+      ),
+    );
+
+    return result;
+  }
+
   findAll() {
     return `This action returns all tickets`;
   }

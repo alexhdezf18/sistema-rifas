@@ -7,6 +7,8 @@ import {
   Param,
   Delete,
   UseGuards,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -39,6 +41,23 @@ export class TicketsController {
   @Get('search/:phone')
   findByPhone(@Param('phone') phone: string) {
     return this.ticketsService.findByPhone(phone);
+  }
+
+  @Post('bulk')
+  async createMany(
+    @Body()
+    body: {
+      raffleId: string;
+      clientName: string;
+      clientPhone: string;
+      ticketNumbers: number[];
+    },
+  ) {
+    try {
+      return await this.ticketsService.createMany(body);
+    } catch (error: any) {
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+    }
   }
 
   @Get()
