@@ -46,9 +46,18 @@ export class RafflesService {
     return this.prisma.raffle.findUnique({ where: { id } });
   }
 
-  // ... Dejamos update y remove pendientes por ahora
-  update(id: string, updateRaffleDto: UpdateRaffleDto) {
-    return `This action updates a #${id} raffle`;
+  async update(id: string, updateRaffleDto: UpdateRaffleDto) {
+    // Convertimos fechas si vienen en el DTO
+    const data: any = { ...updateRaffleDto };
+
+    // Si vienen fechas como string, las pasamos a Date
+    if (data.startDate) data.startDate = new Date(data.startDate);
+    if (data.endDate) data.endDate = new Date(data.endDate);
+
+    return this.prisma.raffle.update({
+      where: { id },
+      data: data,
+    });
   }
 
   async remove(id: string) {

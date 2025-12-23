@@ -150,16 +150,28 @@ export default function AdminDashboard() {
 
               return (
                 <div key={raffle.id} className="relative group">
-                  {" "}
-                  {/* Wrapper para posicionar el botón de borrar */}
-                  {/* BOTÓN DE BORRAR (FLOTANTE) */}
-                  <button
-                    onClick={(e) => handleDelete(e, raffle.id, raffle.name)}
-                    className="absolute top-2 right-2 z-20 bg-white/90 p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all shadow-sm opacity-0 group-hover:opacity-100"
-                    title="Eliminar rifa"
-                  >
-                    🗑️
-                  </button>
+                  {/* --- CORRECCIÓN AQUÍ: CONTENEDOR DE BOTONES --- */}
+                  <div className="absolute top-2 right-2 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    {/* Botón Editar */}
+                    <Link
+                      href={`/admin/edit-raffle/${raffle.id}`}
+                      className="bg-white/90 p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 shadow-sm backdrop-blur-sm"
+                      title="Editar rifa"
+                    >
+                      ✏️
+                    </Link>
+
+                    {/* Botón Borrar */}
+                    <button
+                      onClick={(e) => handleDelete(e, raffle.id, raffle.name)}
+                      className="bg-white/90 p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 shadow-sm backdrop-blur-sm"
+                      title="Eliminar rifa"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                  {/* ------------------------------------------------ */}
+
                   <Link
                     href={`/admin/${raffle.id}`}
                     className="block bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-xl transition-all hover:-translate-y-1 relative overflow-hidden h-full"
@@ -178,6 +190,7 @@ export default function AdminDashboard() {
                         <img
                           src={raffle.imageUrl}
                           className="w-full h-full object-cover"
+                          alt="Fondo decorativo"
                         />
                       </div>
                     )}
