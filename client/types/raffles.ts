@@ -8,6 +8,8 @@ export interface Raffle {
   totalTickets: number;
   opportunities: number;
   isActive: boolean;
+  startDate: string;
+  endDate: string;
   _count?: {
     tickets: number;
   };
