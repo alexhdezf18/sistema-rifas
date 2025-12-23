@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react"; // <--- USAMOS NEXTAUTH
+import { useSession, signOut } from "next-auth/react";
 import { Raffle } from "@/types/raffles";
 import { toast } from "sonner";
+import RevenueChart from "@/components/RevenueChart";
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { data: session, status } = useSession(); // <--- OBTENEMOS LA SESIÓN
+  const { data: session, status } = useSession();
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -123,6 +124,10 @@ export default function AdminDashboard() {
               <span>+</span> Crear Rifa
             </Link>
           </div>
+        </div>
+
+        <div className="mb-8">
+          <RevenueChart />
         </div>
 
         {/* Grid de Rifas (Mismo código visual de antes) */}

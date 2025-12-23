@@ -214,6 +214,65 @@ export class TicketsService {
     return result;
   }
 
+  async getDailySales() {
+    // 1. Calcular fecha de hace 7 días
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // Ajustar al inicio del día (00:00:00) para ser más precisos
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    // 2. Buscar boletos creados en ese periodo
+    const tickets = await this.prisma.ticket.findMany({
+      where: {
+        createdAt: {
+          // Ahora sí debe reconocer este campo tras el 'npx prisma generate'
+          gte: sevenDaysAgo,
+        },
+        // Opcional: Si solo quieres contar boletos pagados, descomenta esto:
+        // status: 'PAID',
+      },
+      include: {
+        raffle: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    // 3. Agrupar por día
+    const salesByDate: Record<string, number> = {};
+
+    // Inicializar los últimos 7 días en 0
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+      }); // Ej: "22/12"
+      salesByDate[dateStr] = 0;
+    }
+
+    // Sumar el dinero
+    tickets.forEach((ticket) => {
+      const dateStr = new Date(ticket.createdAt).toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+      });
+      if (salesByDate[dateStr] !== undefined) {
+        salesByDate[dateStr] += Number(ticket.raffle.ticketPrice);
+      }
+    });
+
+    // Convertir a formato para la gráfica
+    const result = Object.entries(salesByDate)
+      .map(([name, total]) => ({ name, total }))
+      // Invertir para que el día más viejo esté a la izquierda y hoy a la derecha
+      .reverse();
+
+    return result;
+  }
+
   findAll() {
     return `This action returns all tickets`;
   }

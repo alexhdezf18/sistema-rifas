@@ -54,10 +54,17 @@ export class TicketsController {
     },
   ) {
     try {
+      console.log('📥 Recibiendo datos:', body); // <--- VER QUÉ LLEGA
       return await this.ticketsService.createMany(body);
     } catch (error: any) {
+      console.error('❌ ERROR EN EL BACKEND:', error); // <--- VER EL ERROR REAL
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
+  }
+
+  @Get('analytics/daily')
+  getDailySales() {
+    return this.ticketsService.getDailySales();
   }
 
   @Get()

@@ -40,25 +40,26 @@ model Client {
 
 // MODELO DE TICKETS (Solo guardamos los ocupados)
 model Ticket {
-  id             String        @id @default(uuid())
+  id           String       @id @default(uuid())
+  ticketNumber Int
   
-  // El número de boleto "Padre". Si compras el 05, aquí guardamos 5.
-  ticketNumber   Int           
-  
-  status         TicketStatus  @default(RESERVED)
-  
-  // Si no pagan en X horas, usamos este campo para saber cuándo liberarlo
-  reservedAt     DateTime      @default(now())
-  paidAt         DateTime?     // Fecha cuando mandaron el comprobante
+  // CORRECCIÓN AQUÍ: Volvemos a RESERVED porque así funciona tu lógica
+  status       TicketStatus @default(RESERVED)
+
+  reservedAt   DateTime     @default(now())
+  paidAt       DateTime?
 
   // Relaciones
-  raffleId       String
-  raffle         Raffle        @relation(fields: [raffleId], references: [id])
+  raffleId     String
+  raffle       Raffle       @relation(fields: [raffleId], references: [id], onDelete: Cascade)
   
-  clientId       String
-  client         Client        @relation(fields: [clientId], references: [id])
+  clientId     String
+  client       Client       @relation(fields: [clientId], references: [id])
 
-  // Un constraint compuesto: No puede haber dos tickets con el mismo número en la misma rifa
+  // (Prisma llenará esto automático cuando se cree el registro)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
   @@unique([raffleId, ticketNumber])
 }
 
