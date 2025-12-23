@@ -6,6 +6,7 @@ import Countdown from "@/components/Countdown"; // <--- 1. IMPORTAR
 async function getRaffle(slug: string): Promise<Raffle | null> {
   try {
     const cleanSlug = encodeURIComponent(slug);
+    // URL limpia sin logs
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/raffles/slug/${cleanSlug}`,
       { cache: "no-store" }

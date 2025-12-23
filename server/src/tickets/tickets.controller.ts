@@ -27,7 +27,7 @@ export class TicketsController {
   }
 
   // Marcar un ticket específico como pagado
-  @UseGuards(AuthGuard('jwt')) // <--- ¡ESTO ES EL CANDADO!
+  @UseGuards(AuthGuard('jwt'))
   @Patch(':id/pay')
   markAsPaid(@Param('id') id: string) {
     return this.ticketsService.markAsPaid(id);
@@ -54,10 +54,8 @@ export class TicketsController {
     },
   ) {
     try {
-      console.log('📥 Recibiendo datos:', body); // <--- VER QUÉ LLEGA
       return await this.ticketsService.createMany(body);
     } catch (error: any) {
-      console.error('❌ ERROR EN EL BACKEND:', error); // <--- VER EL ERROR REAL
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
   }

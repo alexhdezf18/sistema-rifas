@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service'; // Importamos nuestro servicio de BD
 import { CreateRaffleDto } from './dto/create-raffle.dto';
 import { UpdateRaffleDto } from './dto/update-raffle.dto';
@@ -8,25 +8,47 @@ export class RafflesService {
   // Inyectamos Prisma en el constructor
   constructor(private prisma: PrismaService) {}
 
-  async create(createRaffleDto: CreateRaffleDto) {
-    // Generamos un "slug" simple (URL amigable) basado en el nombre
-    // Ej: "Gran Rifa Iphone" -> "gran-rifa-iphone-1234"
-    const slug =
-      createRaffleDto.name.toLowerCase().replace(/ /g, '-') + '-' + Date.now();
+  async create(data: any) {
+    // O tu DTO de CreateRaffleDto
+    // 1. Generar Slug si no viene
+    let slug = data.slug;
+    if (!slug || slug.trim() === '') {
+      slug = slugify(data.name);
+    }
 
+    // 2. Verificar que el slug no exista ya (para evitar errores 500)
+    const existing = await this.prisma.raffle.findUnique({
+      where: { slug },
+    });
+
+    if (existing) {
+      // Si ya existe, le agregamos un numero aleatorio al final
+      slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
+    }
+
+    // 3. Crear en base de datos
     return this.prisma.raffle.create({
       data: {
-        ...createRaffleDto, // Copiamos todos los datos que vienen del frontend
-        slug: slug, // Agregamos el slug generado
+        ...data,
+        slug, // <--- Usamos el slug generado
       },
     });
   }
 
   // Buscar una rifa por su URL amigable (Slug)
   async findOneBySlug(slug: string) {
-    return this.prisma.raffle.findUnique({
-      where: { slug }, // Busca en la columna 'slug'
+    const raffle = await this.prisma.raffle.findUnique({
+      where: { slug },
+      include: {
+        tickets: true, // Incluimos los tickets para saber cuáles están ocupados
+      },
     });
+
+    if (!raffle) {
+      throw new NotFoundException(`Rifa con slug ${slug} no encontrada`);
+    }
+
+    return raffle;
   }
 
   async findAll() {
@@ -68,4 +90,14 @@ export class RafflesService {
       where: { id },
     });
   }
+}
+
+function slugify(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-') // Reemplaza espacios con guiones
+    .replace(/[^\w\-]+/g, '') // Elimina caracteres raros
+    .replace(/\-\-+/g, '-'); // Reemplaza múltiples guiones por uno solo
 }
