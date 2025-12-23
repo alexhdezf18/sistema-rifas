@@ -1,313 +1,384 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Raffle } from "@/types/raffles";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-interface Props {
+interface Ticket {
+  ticketNumber: number;
+  status: "AVAILABLE" | "RESERVED" | "PAID";
+}
+
+interface TicketSelectorProps {
   raffle: Raffle;
 }
 
-export default function TicketSelector({ raffle }: Props) {
-  const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
-  const [occupiedNumbers, setOccupiedNumbers] = useState<number[]>([]);
-  const [clientName, setClientName] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
-  const [loading, setLoading] = useState(false);
+export default function TicketSelector({ raffle }: TicketSelectorProps) {
+  const router = useRouter();
+  const [selectedTickets, setSelectedTickets] = useState<number[]>([]);
 
-  // Estados para el Modal de Pago
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [lastReservedNumbers, setLastReservedNumbers] = useState<number[]>([]);
-  const [lastTotal, setLastTotal] = useState(0);
+  // Estados para filtros
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showOnlyAvailable, setShowOnlyAvailable] = useState(false);
 
-  // Generar lista de números
-  const totalToShow = Math.min(raffle.totalTickets, 500);
-  const numbers = Array.from({ length: totalToShow }, (_, i) => i);
+  // Estados para el Modal de Suerte
+  const [isLuckyModalOpen, setIsLuckyModalOpen] = useState(false);
+  const [luckyCount, setLuckyCount] = useState(1); // Cantidad a generar
+  const [previewLuckyTickets, setPreviewLuckyTickets] = useState<number[]>([]); // Números generados para vista previa
 
-  // 1. CARGAR NÚMEROS OCUPADOS AL INICIO
-  useEffect(() => {
-    const fetchOccupied = async () => {
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/tickets/occupied/${raffle.id}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setOccupiedNumbers(data);
-        }
-      } catch (error) {
-        console.error("Error cargando tickets ocupados:", error);
-      }
-    };
+  // Simulación de generación de boletos
+  const allTickets = useMemo(() => {
+    return Array.from({ length: raffle.totalTickets }, (_, i) => ({
+      ticketNumber: i + 1,
+      status: "AVAILABLE", // Aquí conectaríamos con los vendidos reales
+    })) as Ticket[];
+  }, [raffle.totalTickets]);
 
-    fetchOccupied();
-  }, [raffle.id]);
+  const filteredTickets = useMemo(() => {
+    return allTickets.filter((t) => {
+      const matchesSearch = t.ticketNumber.toString().includes(searchTerm);
+      const matchesAvailability = showOnlyAvailable
+        ? t.status === "AVAILABLE"
+        : true;
+      return matchesSearch && matchesAvailability;
+    });
+  }, [allTickets, searchTerm, showOnlyAvailable]);
 
-  const toggleNumber = (num: number) => {
-    if (selectedNumbers.includes(num)) {
-      setSelectedNumbers(selectedNumbers.filter((n) => n !== num));
+  const toggleTicket = (number: number) => {
+    if (selectedTickets.includes(number)) {
+      setSelectedTickets(selectedTickets.filter((n) => n !== number));
     } else {
-      setSelectedNumbers([...selectedNumbers, num]);
+      if (selectedTickets.length >= 50) {
+        toast.warning("Límite de boletos alcanzado");
+        return;
+      }
+      setSelectedTickets([...selectedTickets, number]);
     }
   };
 
-  const handleReserve = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedNumbers.length === 0) {
-      toast.warning("Selecciona al menos un boleto"); // Aviso suave
+  // --- LÓGICA DEL GOLPE DE SUERTE ---
+
+  // 1. Generar la vista previa (No los agrega todavía)
+  const generatePreview = () => {
+    // Buscar disponibles que NO estén seleccionados ni en la preview actual
+    const available = allTickets.filter(
+      (t) =>
+        t.status === "AVAILABLE" && !selectedTickets.includes(t.ticketNumber)
+    );
+
+    if (available.length < luckyCount) {
+      toast.warning(`Solo quedan ${available.length} boletos disponibles`);
       return;
     }
 
-    setLoading(true);
-    // Un toast de carga que se quitará cuando termine
-    const toastId = toast.loading("Apartando tus boletos...");
+    // Mezclar y tomar X cantidad
+    const shuffled = [...available].sort(() => 0.5 - Math.random());
+    const picked = shuffled.slice(0, luckyCount).map((t) => t.ticketNumber);
 
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tickets`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          raffleId: raffle.id,
-          numbers: selectedNumbers,
-          clientName,
-          clientPhone,
-        }),
-      });
+    // Ordenarlos para que se vean bonitos
+    setPreviewLuckyTickets(picked.sort((a, b) => a - b));
+  };
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        // Error del servidor (ej. boleto ya ocupado)
-        toast.error(data.message || "No se pudo reservar", {
-          id: toastId, // Reemplaza al loading
-        });
-      } else {
-        // --- ÉXITO ---
-        toast.success("¡Boletos apartados con éxito!", {
-          id: toastId, // Reemplaza al loading
-          duration: 4000, // Dura 4 segundos
-        });
-
-        // Preparamos el Modal (esto sigue igual)
-        const total = selectedNumbers.length * Number(raffle.ticketPrice);
-        setLastReservedNumbers(selectedNumbers);
-        setLastTotal(total);
-
-        setOccupiedNumbers([...occupiedNumbers, ...selectedNumbers]);
-
-        setSelectedNumbers([]);
-        setClientName("");
-        setClientPhone("");
-
-        setShowPaymentModal(true);
-      }
-    } catch (error) {
-      toast.error("Error de conexión. Intenta de nuevo.", {
-        id: toastId,
-      });
-    } finally {
-      setLoading(false);
+  // 2. Confirmar y agregar al carrito
+  const confirmLuckyTickets = () => {
+    const totalSelected = selectedTickets.length + previewLuckyTickets.length;
+    if (totalSelected > 50) {
+      toast.warning("Límite total de boletos excedido");
+      return;
     }
+
+    setSelectedTickets([...selectedTickets, ...previewLuckyTickets]);
+    toast.success("¡Boletos agregados con éxito! 🍀");
+
+    // Limpiar y cerrar modal
+    setPreviewLuckyTickets([]);
+    setIsLuckyModalOpen(false);
   };
 
-  // Función para cerrar el modal
-  const closeModal = () => setShowPaymentModal(false);
-
-  // --- DATOS BANCARIOS (Personaliza esto) ---
-  const BANK_INFO = {
-    bankName: "BBVA Bancomer",
-    accountNumber: "1234 5678 9012 3456",
-    beneficiary: "Alex Hernández",
-    clabe: "012345678901234567",
+  const handleCheckout = () => {
+    if (selectedTickets.length === 0) return;
+    localStorage.setItem("cart_raffle", JSON.stringify(raffle));
+    localStorage.setItem("cart_tickets", JSON.stringify(selectedTickets));
+    router.push(`/checkout`);
   };
-
-  // --- MENSAJE DE WHATSAPP ---
-  // Cambia este número por el tuyo real
-  const ADMIN_PHONE = "5216141234567"; // Ej: 52 + 1 + Lada + Número
-  const whatsappMessage = encodeURIComponent(
-    `Hola, acabo de apartar los boletos: ${lastReservedNumbers.join(
-      ", "
-    )} de la rifa "${
-      raffle.name
-    }".\n\nTotal a pagar: $${lastTotal}.\n\nAquí envío mi comprobante de pago 👇`
-  );
-  const whatsappUrl = `https://wa.me/${ADMIN_PHONE}?text=${whatsappMessage}`;
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-8 relative">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-        Selecciona tus boletos 🎟️
-      </h2>
-
-      <div className="grid grid-cols-5 md:grid-cols-10 gap-2 mb-8">
-        {numbers.map((num) => {
-          const isSelected = selectedNumbers.includes(num);
-          const isOccupied = occupiedNumbers.includes(num);
-
-          return (
-            <button
-              key={num}
-              disabled={isOccupied}
-              onClick={() => toggleNumber(num)}
-              className={`
-                aspect-square border-2 rounded-lg flex items-center justify-center font-bold transition-all
-                ${
-                  isOccupied
-                    ? "bg-red-100 border-red-200 text-red-300 cursor-not-allowed line-through"
-                    : isSelected
-                    ? "bg-yellow-400 border-yellow-500 text-black scale-95 shadow-inner"
-                    : "border-gray-200 text-gray-600 hover:border-blue-500 hover:bg-blue-50"
-                }
-              `}
-            >
-              {num.toString().padStart(raffle.totalTickets > 99 ? 3 : 2, "0")}
-            </button>
-          );
-        })}
-      </div>
-
-      {selectedNumbers.length > 0 && (
-        <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 animate-fade-in">
-          <h3 className="font-bold text-lg mb-4 text-gray-800">
-            Resumen de tu apartado
-          </h3>
-
-          <div className="mb-4 text-sm text-gray-600">
-            Estás apartando{" "}
-            <span className="font-bold">{selectedNumbers.length}</span>{" "}
-            boleto(s):
-            <div className="mt-1 flex flex-wrap gap-1">
-              {selectedNumbers.map((n) => (
-                <span
-                  key={n}
-                  className="bg-white border px-2 py-1 rounded text-xs font-mono"
-                >
-                  {n}
-                </span>
-              ))}
-            </div>
-            <div className="mt-2 font-bold text-green-600 text-lg">
-              Total: $
-              {(selectedNumbers.length * Number(raffle.ticketPrice)).toFixed(2)}
-            </div>
-          </div>
-
-          <form onSubmit={handleReserve} className="flex flex-col gap-4">
-            <input
-              type="text"
-              placeholder="Tu Nombre Completo"
-              required
-              className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-            />
-            <input
-              type="tel"
-              placeholder="Tu Teléfono (WhatsApp)"
-              required
-              className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              value={clientPhone}
-              onChange={(e) => setClientPhone(e.target.value)}
-            />
-
-            <button
-              type="submit"
-              disabled={loading}
-              className={`
-                py-3 px-6 rounded-lg font-bold text-white transition-colors shadow-md
-                ${
-                  loading
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-black hover:bg-gray-800"
-                }
-              `}
-            >
-              {loading ? "Apartando..." : "Confirmar Apartado"}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* --- MODAL DE PAGO (Overlay) --- */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all scale-100">
-            {/* Header del Modal */}
-            <div className="bg-green-600 p-6 text-white text-center">
-              <div className="mx-auto bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-3 text-3xl">
-                🎉
-              </div>
-              <h3 className="text-2xl font-bold">¡Boletos Apartados!</h3>
-              <p className="text-green-100 mt-1">
-                Tienes 24 horas para completar tu pago.
+    <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 border border-gray-100 relative">
+      {/* --- MODAL "GOLPE DE SUERTE" MEJORADO --- */}
+      {isLuckyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="text-center mb-6">
+              <span className="text-4xl mb-2 block">🎰</span>
+              <h3 className="text-2xl font-bold text-gray-900">
+                Golpe de Suerte
+              </h3>
+              <p className="text-sm text-gray-500">
+                Deja que el destino elija por ti.
               </p>
             </div>
 
-            {/* Cuerpo del Modal */}
-            <div className="p-6 space-y-6">
-              {/* Resumen */}
-              <div className="bg-gray-50 p-4 rounded-lg text-center border border-gray-100">
-                <p className="text-sm text-gray-500">Total a pagar:</p>
-                <p className="text-3xl font-extrabold text-gray-800">
-                  ${lastTotal.toFixed(2)}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Por {lastReservedNumbers.length} boletos
-                </p>
-              </div>
+            {/* SECCIÓN 1: Elegir Cantidad (Solo si no hay preview) */}
+            {previewLuckyTickets.length === 0 ? (
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  ¿Cuántos boletos quieres?
+                </label>
 
-              {/* Datos Bancarios */}
-              <div className="space-y-3">
-                <p className="font-semibold text-gray-700 flex items-center gap-2">
-                  🏦 Datos de Transferencia:
-                </p>
-                <div className="text-sm text-gray-600 bg-blue-50 p-4 rounded-lg border border-blue-100 space-y-2">
-                  <div className="flex justify-between">
-                    <span>Banco:</span>
-                    <span className="font-bold">{BANK_INFO.bankName}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Beneficiario:</span>
-                    <span className="font-bold">{BANK_INFO.beneficiary}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Cuenta:</span>
-                    <span className="font-mono font-bold select-all">
-                      {BANK_INFO.accountNumber}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>CLABE:</span>
-                    <span className="font-mono font-bold select-all">
-                      {BANK_INFO.clabe}
-                    </span>
+                {/* COMBO BOX / SELECT */}
+                <div className="relative">
+                  <select
+                    value={luckyCount}
+                    onChange={(e) => setLuckyCount(Number(e.target.value))}
+                    className="w-full appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-lg rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 pr-8 outline-none font-bold text-center"
+                  >
+                    {[1, 2, 3, 4, 5, 10, 15, 20, 25, 50].map((num) => (
+                      <option key={num} value={num}>
+                        {num} {num === 1 ? "Boleto" : "Boletos"}
+                      </option>
+                    ))}
+                  </select>
+                  {/* Flechita decorativa */}
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-700">
+                    <svg
+                      className="fill-current h-4 w-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                    </svg>
                   </div>
                 </div>
+
+                <button
+                  onClick={generatePreview}
+                  className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95"
+                >
+                  ✨ Ver mis Números de la Suerte
+                </button>
               </div>
+            ) : (
+              // SECCIÓN 2: Vista Previa y Confirmación
+              <div className="animate-in slide-in-from-bottom-4 duration-300">
+                <p className="text-center text-gray-600 mb-3 text-sm font-medium">
+                  ¡Mira lo que encontramos para ti!
+                </p>
 
-              {/* Botón WhatsApp */}
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="block w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3 px-4 rounded-xl text-center shadow-lg transition-transform hover:scale-[1.02] flex items-center justify-center gap-2"
-              >
-                <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                </svg>
-                Enviar Comprobante
-              </a>
+                {/* Grid de números preliminares */}
+                <div className="bg-blue-50 rounded-xl p-4 mb-6 max-h-48 overflow-y-auto custom-scrollbar border border-blue-100">
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {previewLuckyTickets.map((num) => (
+                      <span
+                        key={num}
+                        className="bg-white text-blue-700 border border-blue-200 font-mono font-bold px-2 py-1 rounded shadow-sm text-sm"
+                      >
+                        {num.toString().padStart(3, "0")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
 
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={confirmLuckyTickets}
+                    className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-green-200 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
+                  >
+                    <span>❤️ Me gustan, ¡agregalos!</span>
+                  </button>
+
+                  <button
+                    onClick={generatePreview}
+                    className="w-full bg-white border border-gray-300 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-2"
+                  >
+                    <span>🔄 Mmm, prueba otros</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setIsLuckyModalOpen(false);
+                setPreviewLuckyTickets([]); // Resetear al cerrar
+              }}
+              className="w-full mt-4 text-gray-400 text-sm font-medium hover:text-gray-600"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- RESTO DEL COMPONENTE IGUAL (Header, Buscador, Grid, Barra Inferior) --- */}
+
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          Elige tu Suerte 🍀
+        </h2>
+        <p className="text-gray-500">
+          Selecciona tus números favoritos o deja que el destino decida.
+        </p>
+      </div>
+
+      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div className="relative w-full md:w-64">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            🔍
+          </span>
+          <input
+            type="number"
+            placeholder="Buscar número..."
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        <div className="flex gap-3 w-full md:w-auto">
+          <button
+            onClick={() => {
+              setLuckyCount(1);
+              setPreviewLuckyTickets([]); // Asegurar que inicie limpio
+              setIsLuckyModalOpen(true);
+            }}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-lg font-bold hover:bg-purple-200 transition-colors"
+          >
+            ⚡ Al Azar
+          </button>
+          <button
+            onClick={() => setShowOnlyAvailable(!showOnlyAvailable)}
+            className={`flex-1 md:flex-none px-4 py-2 rounded-lg font-bold border transition-colors ${
+              showOnlyAvailable
+                ? "bg-gray-800 text-white border-gray-800"
+                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            {showOnlyAvailable ? "Ver Todos" : "Solo Libres"}
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-8 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+        {filteredTickets.length > 0 ? (
+          <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 md:gap-3">
+            {filteredTickets.map((ticket) => {
+              const isSelected = selectedTickets.includes(ticket.ticketNumber);
+              const isSold =
+                ticket.status === "PAID" || ticket.status === "RESERVED";
+
+              return (
+                <button
+                  key={ticket.ticketNumber}
+                  disabled={isSold}
+                  onClick={() => toggleTicket(ticket.ticketNumber)}
+                  className={`
+                    relative group flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all duration-200
+                    ${
+                      isSold
+                        ? "bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed"
+                        : isSelected
+                        ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 scale-105 transform z-10"
+                        : "bg-white border-gray-100 hover:border-blue-400 hover:shadow-md text-gray-700"
+                    }
+                  `}
+                >
+                  <span
+                    className={`text-sm md:text-base font-bold font-mono ${
+                      isSelected ? "text-white" : "text-gray-900"
+                    }`}
+                  >
+                    {ticket.ticketNumber.toString().padStart(3, "0")}
+                  </span>
+                  {isSold && (
+                    <span className="text-[8px] uppercase font-bold text-gray-400 mt-1">
+                      Ocupado
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+            <p className="text-gray-500">
+              No encontramos boletos con ese criterio 😢
+            </p>
+            <button
+              onClick={() => setSearchTerm("")}
+              className="text-blue-600 font-bold mt-2 hover:underline"
+            >
+              Ver todos
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div
+        className={`
+        fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] transition-transform duration-300 z-40
+        ${selectedTickets.length > 0 ? "translate-y-0" : "translate-y-full"}
+      `}
+      >
+        <div className="max-w-4xl mx-auto flex flex-col gap-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <span className="text-xs font-bold text-gray-400 uppercase whitespace-nowrap mr-2">
+              Tus boletos:
+            </span>
+            {selectedTickets
+              .sort((a, b) => a - b)
+              .map((num) => (
+                <button
+                  key={num}
+                  onClick={() => toggleTicket(num)}
+                  className="flex-shrink-0 bg-blue-50 hover:bg-red-50 text-blue-700 hover:text-red-600 border border-blue-200 hover:border-red-200 px-3 py-1 rounded-full text-sm font-mono font-bold flex items-center gap-2 transition-colors group"
+                >
+                  #{num.toString().padStart(3, "0")}
+                  <span className="text-blue-300 group-hover:text-red-400 text-xs">
+                    ✕
+                  </span>
+                </button>
+              ))}
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-gray-100 pt-2">
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <div className="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-black text-lg shadow-lg shadow-blue-200">
+                {selectedTickets.length}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-500 font-bold uppercase">
+                  Total a pagar
+                </span>
+                <span className="text-2xl font-black text-gray-900 leading-none">
+                  $
+                  {(
+                    selectedTickets.length * raffle.ticketPrice
+                  ).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 w-full sm:w-auto">
               <button
-                onClick={closeModal}
-                className="w-full py-3 text-gray-500 font-medium hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => setSelectedTickets([])}
+                className="px-4 py-3 rounded-xl font-bold text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
               >
-                Cerrar y volver
+                Limpiar
+              </button>
+              <button
+                onClick={handleCheckout}
+                className="flex-1 sm:flex-none bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-xl font-black shadow-lg shadow-green-200 hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
+              >
+                <span>Apartar Boletos</span>
+                <span>&rarr;</span>
               </button>
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="h-40"></div>
     </div>
   );
 }
