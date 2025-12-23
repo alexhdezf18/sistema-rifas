@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from 'src/prisma.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -10,30 +10,26 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async login(email: string, pass: string) {
-    // 1. Buscar al usuario por email
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
+  async validateUser(email: string, pass: string): Promise<any> {
+    // 1. Buscar al admin por email
+    const user = await this.prisma.admin.findUnique({ where: { email } });
 
-    if (!user) {
-      throw new UnauthorizedException('Credenciales inválidas');
+    // 2. Si existe, comparar contraseñas
+    if (user && (await bcrypt.compare(pass, user.password))) {
+      // 3. Si coinciden, quitamos el password del objeto y lo devolvemos
+      const { password, ...result } = user;
+      return result;
     }
 
-    // 2. Comparar contraseña (la que envían vs el hash en la BD)
-    const isMatch = await bcrypt.compare(pass, user.password);
+    return null;
+  }
 
-    if (!isMatch) {
-      throw new UnauthorizedException('Credenciales inválidas');
-    }
-
-    // 3. Si todo está bien, generamos el Token
-    const payload = { sub: user.id, email: user.email };
-
+  async login(user: any) {
+    // Generamos el token real
+    const payload = { email: user.email, sub: user.id };
     return {
       access_token: this.jwtService.sign(payload),
       user: {
-        id: user.id,
         email: user.email,
         name: user.name,
       },

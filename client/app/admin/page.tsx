@@ -3,18 +3,30 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useSession, signOut } from "next-auth/react"; // <--- USAMOS NEXTAUTH
 import { Raffle } from "@/types/raffles";
 import { toast } from "sonner";
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { data: session, status } = useSession(); // <--- OBTENEMOS LA SESIÓN
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Función para cargar datos
+  // 1. Verificar Sesión
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    } else if (status === "authenticated") {
+      // Solo cargamos datos si está autenticado
+      fetchRaffles();
+    }
+  }, [status, router]);
+
+  // 2. Cargar Datos usando el token de la sesión
   const fetchRaffles = async () => {
-    const token = localStorage.getItem("adminToken");
-    if (!token) return;
+    // @ts-ignore (El token viene en la sesión personalizada)
+    const token = session?.accessToken;
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/raffles`, {
@@ -31,18 +43,8 @@ export default function AdminDashboard() {
     }
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-    fetchRaffles();
-  }, [router]);
-
   const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    router.push("/login");
+    signOut({ callbackUrl: "/login" }); // Logout real de NextAuth
   };
 
   const handleDelete = async (
@@ -53,16 +55,11 @@ export default function AdminDashboard() {
     e.preventDefault();
     e.stopPropagation();
 
-    if (
-      !confirm(
-        `¿Estás SEGURO de eliminar la rifa "${name}"?\nEsta acción no se puede deshacer y borrará los boletos asociados.`
-      )
-    ) {
-      return;
-    }
+    if (!confirm(`¿Eliminar "${name}"?`)) return;
 
-    const toastId = toast.loading("Eliminando rifa...");
-    const token = localStorage.getItem("adminToken");
+    const toastId = toast.loading("Eliminando...");
+    // @ts-ignore
+    const token = session?.accessToken;
 
     try {
       const res = await fetch(
@@ -74,24 +71,26 @@ export default function AdminDashboard() {
       );
 
       if (res.ok) {
-        toast.success("Rifa eliminada correctamente", { id: toastId });
+        toast.success("Eliminada", { id: toastId });
         fetchRaffles();
       } else {
-        toast.error("No se pudo eliminar (quizás tiene ventas activas)", {
-          id: toastId,
-        });
+        toast.error("Error al eliminar", { id: toastId });
       }
     } catch (error) {
       toast.error("Error de conexión", { id: toastId });
     }
   };
 
-  if (loading)
+  // Mostrar carga mientras NextAuth verifica
+  if (status === "loading" || (loading && status === "authenticated"))
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Cargando estadísticas...
+        Cargando panel seguro...
       </div>
     );
+
+  // Si no está autenticado, no renderizamos nada (el useEffect redirige)
+  if (status === "unauthenticated") return null;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-12">
@@ -100,10 +99,13 @@ export default function AdminDashboard() {
         <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Panel de Control 📈
+              Panel de Control 🔒
             </h1>
             <p className="text-gray-500">
-              Resumen de ventas y gestión de rifas.
+              Hola,{" "}
+              <span className="font-bold text-blue-600">
+                {session?.user?.name}
+              </span>
             </p>
           </div>
 
@@ -112,7 +114,7 @@ export default function AdminDashboard() {
               onClick={handleLogout}
               className="text-gray-500 hover:text-red-500 font-medium transition-colors px-4"
             >
-              Salir
+              Cerrar Sesión
             </button>
             <Link
               href="/admin/create-raffle"
@@ -123,17 +125,15 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Grid de Rifas */}
+        {/* Grid de Rifas (Mismo código visual de antes) */}
         {raffles.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200">
-            <p className="text-gray-400 text-lg mb-4">
-              No tienes ninguna rifa activa.
-            </p>
+            <p className="text-gray-400 text-lg mb-4">No hay rifas activas.</p>
             <Link
               href="/admin/create-raffle"
               className="text-blue-600 font-bold hover:underline"
             >
-              ¡Empieza tu negocio aquí!
+              Crear una ahora
             </Link>
           </div>
         ) : (
@@ -150,27 +150,20 @@ export default function AdminDashboard() {
 
               return (
                 <div key={raffle.id} className="relative group">
-                  {/* --- CORRECCIÓN AQUÍ: CONTENEDOR DE BOTONES --- */}
                   <div className="absolute top-2 right-2 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    {/* Botón Editar */}
                     <Link
                       href={`/admin/edit-raffle/${raffle.id}`}
                       className="bg-white/90 p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 shadow-sm backdrop-blur-sm"
-                      title="Editar rifa"
                     >
                       ✏️
                     </Link>
-
-                    {/* Botón Borrar */}
                     <button
                       onClick={(e) => handleDelete(e, raffle.id, raffle.name)}
                       className="bg-white/90 p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 shadow-sm backdrop-blur-sm"
-                      title="Eliminar rifa"
                     >
                       🗑️
                     </button>
                   </div>
-                  {/* ------------------------------------------------ */}
 
                   <Link
                     href={`/admin/${raffle.id}`}
@@ -184,17 +177,14 @@ export default function AdminDashboard() {
                         ${raffle.ticketPrice} c/u
                       </span>
                     </div>
-
                     {raffle.imageUrl && (
                       <div className="absolute top-0 right-0 w-24 h-24 opacity-10 -mr-4 -mt-4 rounded-full overflow-hidden pointer-events-none">
                         <img
                           src={raffle.imageUrl}
                           className="w-full h-full object-cover"
-                          alt="Fondo decorativo"
                         />
                       </div>
                     )}
-
                     <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
                       <div className="bg-gray-50 p-3 rounded-lg">
                         <p className="text-xs text-gray-500 uppercase font-bold">
@@ -216,7 +206,6 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                     </div>
-
                     <div className="relative z-10">
                       <div className="flex justify-between text-xs text-gray-500 mb-1 font-medium">
                         <span>Progreso</span>

@@ -1,68 +1,56 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react"; // <--- Importamos esto
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setLoading(true);
 
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+    // USAMOS NEXTAUTH PARA INICIAR SESIÓN
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false, // No redirigir automático para poder mostrar errores
+    });
 
-      if (!res.ok) {
-        throw new Error("Credenciales incorrectas");
-      }
-
-      const data = await res.json();
-
-      // 1. GUARDAR EL TOKEN (La llave maestra)
-      // Lo guardamos en localStorage para usarlo después
-      localStorage.setItem("adminToken", data.access_token);
-
-      alert("¡Bienvenido Admin!");
-
-      // Redirigir al inicio (o a donde prefieras)
-      router.push("/");
-    } catch (err) {
-      setError("Email o contraseña incorrectos");
+    if (result?.error) {
+      toast.error("Credenciales incorrectas");
+      setLoading(false);
+    } else {
+      toast.success("¡Bienvenido Admin!");
+      router.push("/admin"); // Redirigir al dashboard
+      router.refresh(); // Actualizar rutas
     }
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-          Inicia Sesión
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
+          Acceso Administrativo 🛡️
         </h1>
 
-        {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm text-center">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Correo Electrónico
             </label>
             <input
               type="email"
-              required
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="admin@turifa.com"
+              required
             />
           </div>
 
@@ -72,21 +60,27 @@ export default function LoginPage() {
             </label>
             <input
               type="password"
-              required
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="••••••"
+              required
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700 transition"
+            disabled={loading}
+            className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors disabled:opacity-50"
           >
-            Entrar
+            {loading ? "Verificando..." : "Ingresar"}
           </button>
         </form>
+
+        <div className="mt-6 text-center text-xs text-gray-400">
+          Solo personal autorizado.
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

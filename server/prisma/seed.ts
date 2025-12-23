@@ -4,30 +4,25 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  // 1. Definir los datos del Super Admin
-  const email = 'admin@admin.com';
-  const password = 'password123'; // <--- Contraseña inicial
-  const name = 'Super Admin';
+  const email = 'admin@turifa.com';
+  const passwordRaw = '123456';
 
-  // 2. Verificar si ya existe
-  const existingUser = await prisma.user.findUnique({ where: { email } });
+  // Encriptar la contraseña (10 rondas de sal)
+  const hashedPassword = await bcrypt.hash(passwordRaw, 10);
 
-  if (!existingUser) {
-    // 3. Encriptar la contraseña (10 rondas de sal)
-    const hashedPassword = await bcrypt.hash(password, 10);
+  // Crear o actualizar el admin (upsert evita duplicados si corres el script 2 veces)
+  const admin = await prisma.admin.upsert({
+    where: { email },
+    update: {},
+    create: {
+      email,
+      password: hashedPassword,
+      name: 'Super Admin',
+    },
+  });
 
-    // 4. Crear el usuario
-    await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-      },
-    });
-    console.log(`✅ Usuario Admin creado: ${email} / ${password}`);
-  } else {
-    console.log('ℹ️ El usuario Admin ya existe. No se hizo nada.');
-  }
+  console.log('🛡️ Admin creado:', admin.email);
+  console.log('🔑 Contraseña:', passwordRaw);
 }
 
 main()
