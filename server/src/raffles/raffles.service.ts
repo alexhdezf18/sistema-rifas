@@ -51,7 +51,12 @@ export class RafflesService {
     return `This action updates a #${id} raffle`;
   }
 
-  remove(id: string) {
-    return `This action removes a #${id} raffle`;
+  async remove(id: string) {
+    // Intentamos borrar. Si tiene boletos relacionados, Prisma podría quejarse
+    // así que usamos una transacción para borrar boletos primero (cascada manual) o dejamos que falle si hay ventas.
+    // Para simplificar, usaremos el borrado directo.
+    return this.prisma.raffle.delete({
+      where: { id },
+    });
   }
 }
