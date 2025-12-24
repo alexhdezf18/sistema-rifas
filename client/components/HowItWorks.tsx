@@ -18,13 +18,17 @@ export default function HowItWorks() {
   ];
 
   return (
-    <div className="bg-gray-50 py-16 border-y border-gray-100">
+    // 1. Contenedor principal: bg-gray-50 (claro) -> dark:bg-gray-900 (oscuro)
+    // Agregamos transition-colors para que el cambio sea suave
+    <div className="bg-gray-50 dark:bg-gray-900 py-16 border-y border-gray-100 dark:border-gray-800 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-extrabold text-gray-900">
+          {/* 2. Título principal: text-gray-900 -> dark:text-white */}
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">
             ¿Cómo participar?
           </h2>
-          <p className="mt-4 text-gray-500">
+          {/* Subtítulo: text-gray-500 -> dark:text-gray-400 (para que se lea bien sobre negro) */}
+          <p className="mt-4 text-gray-500 dark:text-gray-400">
             Es tan fácil como contar hasta tres.
           </p>
         </div>
@@ -33,13 +37,19 @@ export default function HowItWorks() {
           {steps.map((step, idx) => (
             <div
               key={idx}
-              className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+              // 3. Tarjetas: bg-white -> dark:bg-gray-800 (gris oscuro para resaltar sobre el fondo negro)
+              // Bordes: dark:border-gray-700
+              className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-300"
             >
               <div className="text-5xl mb-6">{step.emoji}</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
+              {/* Título de la tarjeta */}
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                 {step.title}
               </h3>
-              <p className="text-gray-500 leading-relaxed">{step.desc}</p>
+              {/* Descripción de la tarjeta */}
+              <p className="text-gray-500 dark:text-gray-300 leading-relaxed">
+                {step.desc}
+              </p>
             </div>
           ))}
         </div>

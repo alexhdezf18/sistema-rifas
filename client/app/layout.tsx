@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "sonner";
-import { Providers } from "./providers";
+import { Providers } from "./providers"; // Importamos nuestros providers unificados
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,12 +16,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    // IMPORTANTE: suppressHydrationWarning evita errores de coincidencia
+    // entre servidor/cliente por culpa del modo oscuro.
+    <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
-        <Providers>
-          {children}
-          <Toaster richColors position="top-center" />
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

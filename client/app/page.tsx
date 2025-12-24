@@ -21,7 +21,7 @@ export default async function Home() {
   const raffles: Raffle[] = await getRaffles();
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-300">
       {/* 1. Barra de Navegación */}
       <Navbar />
 
@@ -38,10 +38,12 @@ export default async function Home() {
       >
         <div className="flex justify-between items-end mb-10">
           <div>
-            <h2 className="text-3xl font-extrabold text-gray-900">
+            {/* Título: Agregamos dark:text-white */}
+            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">
               Sorteos Activos ⚡
             </h2>
-            <p className="text-gray-500 mt-2">
+            {/* Subtítulo: Agregamos dark:text-gray-400 */}
+            <p className="text-gray-500 dark:text-gray-400 mt-2">
               No dejes pasar la oportunidad, el tiempo corre.
             </p>
           </div>
@@ -54,8 +56,9 @@ export default async function Home() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
-            <p className="text-xl text-gray-400 font-medium">
+          /* Estado vacío: Fondo oscuro (gray-800) y bordes oscuros (gray-700) */
+          <div className="text-center py-20 bg-gray-50 dark:bg-gray-800 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 transition-colors">
+            <p className="text-xl text-gray-400 dark:text-gray-300 font-medium">
               Actualmente estamos preparando nuevos sorteos.
               <br />
               ¡Vuelve pronto! 🕒
