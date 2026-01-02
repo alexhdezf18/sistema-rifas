@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { Raffle } from "@/types/raffles";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import confetti from "canvas-confetti";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Ticket {
   ticketNumber: number;
@@ -81,6 +83,13 @@ export default function TicketSelector({ raffle }: TicketSelectorProps) {
       return;
     }
     setSelectedTickets([...selectedTickets, ...previewLuckyTickets]);
+
+    confetti({
+      particleCount: 100, // Cantidad de papelitos
+      spread: 70, // Qué tan abierto es el disparo
+      origin: { y: 0.6 }, // Desde dónde sale (0.6 es un poco más abajo de la mitad)
+    });
+
     toast.success("¡Boletos agregados con éxito! 🍀");
     setPreviewLuckyTickets([]);
     setIsLuckyModalOpen(false);
@@ -97,110 +106,126 @@ export default function TicketSelector({ raffle }: TicketSelectorProps) {
     // CONTENEDOR PRINCIPAL: bg-white -> dark:bg-gray-800
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 md:p-8 border border-gray-100 dark:border-gray-700 relative transition-colors duration-300">
       {/* --- MODAL "GOLPE DE SUERTE" --- */}
-      {isLuckyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all">
-          {/* Modal: bg-white -> dark:bg-gray-900 */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200 border border-transparent dark:border-gray-700">
-            <div className="text-center mb-6">
-              <span className="text-4xl mb-2 block">🎰</span>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Golpe de Suerte
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Deja que el destino elija por ti.
-              </p>
-            </div>
-
-            {/* SECCIÓN 1: Elegir Cantidad */}
-            {previewLuckyTickets.length === 0 ? (
-              <div className="mb-6">
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                  ¿Cuántos boletos quieres?
-                </label>
-
-                {/* SELECT: Adaptado a modo oscuro */}
-                <div className="relative">
-                  <select
-                    value={luckyCount}
-                    onChange={(e) => setLuckyCount(Number(e.target.value))}
-                    className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-lg rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 pr-8 outline-none font-bold text-center"
-                  >
-                    {[1, 2, 3, 4, 5, 10, 15, 20, 25, 50].map((num) => (
-                      <option key={num} value={num}>
-                        {num} {num === 1 ? "Boleto" : "Boletos"}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-700 dark:text-gray-400">
-                    <svg
-                      className="fill-current h-4 w-4"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                    </svg>
-                  </div>
-                </div>
-
-                <button
-                  onClick={generatePreview}
-                  className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all active:scale-95"
-                >
-                  ✨ Ver mis Números de la Suerte
-                </button>
-              </div>
-            ) : (
-              // SECCIÓN 2: Vista Previa
-              <div className="animate-in slide-in-from-bottom-4 duration-300">
-                <p className="text-center text-gray-600 dark:text-gray-400 mb-3 text-sm font-medium">
-                  ¡Mira lo que encontramos para ti!
+      <AnimatePresence>
+        {isLuckyModalOpen && (
+          // 1. EL FONDO OSCURO (OVERLAY)
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            // Nota: Quitamos "transition-all" para dejar que framer maneje la animación
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          >
+            {/* 2. LA TARJETA DEL MODAL */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              // Nota: Cambiamos <div> por <motion.div> y QUITAMOS "animate-in fade-in zoom-in duration-200"
+              className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-transparent dark:border-gray-700 overflow-hidden"
+            >
+              <div className="text-center mb-6">
+                <span className="text-4xl mb-2 block">🎰</span>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Golpe de Suerte
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Deja que el destino elija por ti.
                 </p>
+              </div>
 
-                {/* Grid de números: Adaptado a azul oscuro en dark mode */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6 max-h-48 overflow-y-auto custom-scrollbar border border-blue-100 dark:border-blue-800">
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {previewLuckyTickets.map((num) => (
-                      <span
-                        key={num}
-                        // Números: bg-white -> dark:bg-gray-800
-                        className="bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 font-mono font-bold px-2 py-1 rounded shadow-sm text-sm"
+              {/* SECCIÓN 1: Elegir Cantidad */}
+              {previewLuckyTickets.length === 0 ? (
+                <div className="mb-6">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    ¿Cuántos boletos quieres?
+                  </label>
+
+                  {/* SELECT: Adaptado a modo oscuro */}
+                  <div className="relative">
+                    <select
+                      value={luckyCount}
+                      onChange={(e) => setLuckyCount(Number(e.target.value))}
+                      className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-lg rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 pr-8 outline-none font-bold text-center"
+                    >
+                      {[1, 2, 3, 4, 5, 10, 15, 20, 25, 50].map((num) => (
+                        <option key={num} value={num}>
+                          {num} {num === 1 ? "Boleto" : "Boletos"}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-700 dark:text-gray-400">
+                      <svg
+                        className="fill-current h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
                       >
-                        {num.toString().padStart(3, "0")}
-                      </span>
-                    ))}
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={confirmLuckyTickets}
-                    className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-green-200 dark:shadow-green-900/30 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
-                  >
-                    <span>❤️ Me gustan, ¡agregalos!</span>
-                  </button>
 
                   <button
                     onClick={generatePreview}
-                    className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-bold py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-2 transition-colors"
+                    className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all active:scale-95"
                   >
-                    <span>🔄 Mmm, prueba otros</span>
+                    ✨ Ver mis Números de la Suerte
                   </button>
                 </div>
-              </div>
-            )}
+              ) : (
+                // SECCIÓN 2: Vista Previa
+                <div className="animate-in slide-in-from-bottom-4 duration-300">
+                  <p className="text-center text-gray-600 dark:text-gray-400 mb-3 text-sm font-medium">
+                    ¡Mira lo que encontramos para ti!
+                  </p>
 
-            <button
-              onClick={() => {
-                setIsLuckyModalOpen(false);
-                setPreviewLuckyTickets([]);
-              }}
-              className="w-full mt-4 text-gray-400 dark:text-gray-500 text-sm font-medium hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+                  {/* Grid de números: Adaptado a azul oscuro en dark mode */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6 max-h-48 overflow-y-auto custom-scrollbar border border-blue-100 dark:border-blue-800">
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {previewLuckyTickets.map((num) => (
+                        <span
+                          key={num}
+                          // Números: bg-white -> dark:bg-gray-800
+                          className="bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 font-mono font-bold px-2 py-1 rounded shadow-sm text-sm"
+                        >
+                          {num.toString().padStart(3, "0")}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={confirmLuckyTickets}
+                      className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-green-200 dark:shadow-green-900/30 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
+                    >
+                      <span>❤️ Me gustan, ¡agregalos!</span>
+                    </button>
+
+                    <button
+                      onClick={generatePreview}
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-bold py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <span>🔄 Mmm, prueba otros</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  setIsLuckyModalOpen(false);
+                  setPreviewLuckyTickets([]);
+                }}
+                className="w-full mt-4 text-gray-400 dark:text-gray-500 text-sm font-medium hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* --- HEADER DEL SELECTOR --- */}
       <div className="text-center mb-8">
