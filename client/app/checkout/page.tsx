@@ -5,12 +5,54 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Raffle } from "@/types/raffles";
 
+// Lista de Estados de México
+const mexicanStates = [
+  "Aguascalientes",
+  "Baja California",
+  "Baja California Sur",
+  "Campeche",
+  "Chiapas",
+  "Chihuahua",
+  "Ciudad de México",
+  "Coahuila",
+  "Colima",
+  "Durango",
+  "Estado de México",
+  "Guanajuato",
+  "Guerrero",
+  "Hidalgo",
+  "Jalisco",
+  "Michoacán",
+  "Morelos",
+  "Nayarit",
+  "Nuevo León",
+  "Oaxaca",
+  "Puebla",
+  "Querétaro",
+  "Quintana Roo",
+  "San Luis Potosí",
+  "Sinaloa",
+  "Sonora",
+  "Tabasco",
+  "Tamaulipas",
+  "Tlaxcala",
+  "Veracruz",
+  "Yucatán",
+  "Zacatecas",
+  "Extranjero",
+];
+
 export default function CheckoutPage() {
   const router = useRouter();
   const [raffle, setRaffle] = useState<Raffle | null>(null);
   const [tickets, setTickets] = useState<number[]>([]);
 
-  const [formData, setFormData] = useState({ name: "", phone: "" });
+  // 1. Agregamos el campo 'state' al estado del formulario
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    state: "", // Estado inicial vacío
+  });
   const [loading, setLoading] = useState(false);
 
   // Cargar datos del carrito
@@ -31,6 +73,12 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (!raffle) return;
 
+    // Validación simple
+    if (!formData.state) {
+      toast.error("Por favor selecciona tu estado de residencia");
+      return;
+    }
+
     setLoading(true);
     const toastId = toast.loading("Procesando tu reserva...");
 
@@ -44,6 +92,9 @@ export default function CheckoutPage() {
             raffleId: raffle.id,
             clientName: formData.name,
             clientPhone: formData.phone,
+            // Nota: Si tu backend aún no guarda el estado, no pasará nada malo,
+            // pero lo enviamos por si acaso decides actualizar la base de datos después.
+            clientState: formData.state,
             ticketNumbers: tickets,
           }),
         }
@@ -64,7 +115,8 @@ export default function CheckoutPage() {
         .map((t) => `#${t.toString().padStart(3, "0")}`)
         .join(", ");
 
-      const message = `👋 Hola, acabo de apartar boletos en la rifa *${raffle.name}*.\n\n🎟️ *Boletos:* ${ticketString}\n👤 *A nombre de:* ${formData.name}\n💰 *Total a pagar:* $${total}\n\n¿Me ayudas con los datos de pago?`;
+      // 2. Incluimos el Estado en el mensaje de WhatsApp
+      const message = `👋 Hola, acabo de apartar boletos en la rifa *${raffle.name}*.\n\n🎟️ *Boletos:* ${ticketString}\n👤 *A nombre de:* ${formData.name}\n📍 *Estado:* ${formData.state}\n💰 *Total a pagar:* $${total}\n\n¿Me ayudas con los datos de pago?`;
 
       // RECUERDA: Cambiar esto por una variable de entorno en producción
       const adminPhone = "5215512345678";
@@ -84,7 +136,6 @@ export default function CheckoutPage() {
 
   if (!raffle)
     return (
-      // Loading State adaptado
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
         Cargando carrito...
       </div>
@@ -93,11 +144,9 @@ export default function CheckoutPage() {
   const total = tickets.length * raffle.ticketPrice;
 
   return (
-    // FONDO GENERAL: bg-gray-50 -> dark:bg-gray-900
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 transition-colors duration-300">
       <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* === COLUMNA IZQUIERDA: FORMULARIO === */}
-        {/* bg-white -> dark:bg-gray-800 */}
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-transparent dark:border-gray-700 h-fit transition-all">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             Finalizar Reserva 📝
@@ -107,11 +156,11 @@ export default function CheckoutPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Campo Nombre */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Tu Nombre Completo
               </label>
-              {/* INPUTS: Fondo claro -> Fondo oscuro (gray-700) */}
               <input
                 type="text"
                 required
@@ -124,6 +173,7 @@ export default function CheckoutPage() {
               />
             </div>
 
+            {/* Campo Teléfono */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Teléfono (WhatsApp)
@@ -143,10 +193,45 @@ export default function CheckoutPage() {
               </p>
             </div>
 
+            {/* 3. Nuevo Campo: ESTADO (Combo Box) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Estado de Residencia
+              </label>
+              <div className="relative">
+                <select
+                  required
+                  value={formData.state}
+                  onChange={(e) =>
+                    setFormData({ ...formData, state: e.target.value })
+                  }
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none transition-colors cursor-pointer"
+                >
+                  <option value="" disabled>
+                    Selecciona tu estado
+                  </option>
+                  {mexicanStates.map((state) => (
+                    <option key={state} value={state}>
+                      {state}
+                    </option>
+                  ))}
+                </select>
+                {/* Flecha decorativa del select */}
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 dark:text-gray-400">
+                  <svg
+                    className="fill-current h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              // BOTÓN: Negro -> Azul en dark mode (para resaltar más) o mantener estilo oscuro
               className="w-full bg-black dark:bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 dark:hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg hover:-translate-y-0.5"
             >
               {loading ? (
@@ -164,8 +249,7 @@ export default function CheckoutPage() {
           </form>
         </div>
 
-        {/* === COLUMNA DERECHA: RESUMEN === */}
-        {/* bg-blue-50 -> dark:bg-gray-800 (o un azul muy oscuro) */}
+        {/* === COLUMNA DERECHA: RESUMEN (Sin cambios estructurales) === */}
         <div className="bg-blue-50 dark:bg-blue-900/20 p-8 rounded-2xl border border-blue-100 dark:border-blue-800 h-fit transition-colors">
           <h2 className="text-xl font-bold text-blue-900 dark:text-blue-300 mb-4">
             Resumen de Compra
@@ -189,7 +273,6 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* CAJA DE NÚMEROS: bg-white -> dark:bg-gray-900 */}
           <div className="bg-white dark:bg-gray-900 p-4 rounded-xl mb-6 shadow-sm border border-transparent dark:border-gray-700">
             <p className="text-xs font-bold text-gray-400 uppercase mb-2">
               Tus Números:
@@ -198,7 +281,6 @@ export default function CheckoutPage() {
               {tickets.map((t) => (
                 <span
                   key={t}
-                  // CHIPS: Azul claro -> Azul oscuro transparente
                   className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 px-2 py-1 rounded font-mono font-bold text-sm border border-transparent dark:border-blue-800"
                 >
                   {t.toString().padStart(3, "0")}
