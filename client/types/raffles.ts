@@ -13,4 +13,8 @@ export interface Raffle {
   _count?: {
     tickets: number;
   };
+  tickets?: {
+    ticketNumber: number;
+    status: string;
+  }[];
 }

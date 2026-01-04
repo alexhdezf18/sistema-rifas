@@ -31,18 +31,31 @@ export default function TicketSelector({ raffle }: TicketSelectorProps) {
 
   // Simulación de generación de boletos
   const allTickets = useMemo(() => {
-    return Array.from({ length: raffle.totalTickets }, (_, i) => ({
-      ticketNumber: i + 1,
-      status: "AVAILABLE",
-    })) as Ticket[];
-  }, [raffle.totalTickets]);
+    const occupiedNumbers = new Set(
+      raffle.tickets?.map((t: any) => t.ticketNumber) || []
+    );
+
+    return Array.from({ length: raffle.totalTickets }, (_, i) => {
+      const number = i + 1;
+      const isOccupied = occupiedNumbers.has(number);
+
+      return {
+        ticketNumber: number,
+        status: isOccupied ? "PAID" : "AVAILABLE",
+      } as Ticket;
+    });
+  }, [raffle.totalTickets, raffle.tickets]);
 
   const filteredTickets = useMemo(() => {
     return allTickets.filter((t) => {
+      // Filtro por búsqueda (input de texto)
       const matchesSearch = t.ticketNumber.toString().includes(searchTerm);
+
+      // Filtro por disponibilidad (botón "Solo Libres")
       const matchesAvailability = showOnlyAvailable
         ? t.status === "AVAILABLE"
         : true;
+
       return matchesSearch && matchesAvailability;
     });
   }, [allTickets, searchTerm, showOnlyAvailable]);
