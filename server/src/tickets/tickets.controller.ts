@@ -50,6 +50,7 @@ export class TicketsController {
       raffleId: string;
       clientName: string;
       clientPhone: string;
+      clientState?: string;
       ticketNumbers: number[];
     },
   ) {

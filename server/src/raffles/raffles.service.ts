@@ -57,8 +57,16 @@ export class RafflesService {
         createdAt: 'desc',
       },
       include: {
+        tickets: {
+          select: {
+            id: true,
+            ticketNumber: true,
+            status: true,
+            clientState: true,
+          },
+        },
         _count: {
-          select: { tickets: true }, //CUENTA LOS BOLETOS VENDIDOS/APARTADOS
+          select: { tickets: true },
         },
       },
     });

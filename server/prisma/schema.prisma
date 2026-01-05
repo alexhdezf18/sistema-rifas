@@ -49,6 +49,10 @@ model Ticket {
   reservedAt   DateTime     @default(now())
   paidAt       DateTime?
 
+  // 👇 AQUÍ AGREGAMOS EL NUEVO CAMPO
+  // Lo ponemos opcional (?) para no romper registros viejos que no tienen estado
+  clientState  String?
+
   // Relaciones
   raffleId     String
   raffle       Raffle       @relation(fields: [raffleId], references: [id], onDelete: Cascade)

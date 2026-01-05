@@ -14,7 +14,9 @@ export interface Raffle {
     tickets: number;
   };
   tickets?: {
+    id: string;
     ticketNumber: number;
     status: string;
+    clientState?: string | null;
   }[];
 }

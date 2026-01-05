@@ -159,12 +159,11 @@ export class TicketsService {
     });
   }
 
-  // ... imports y otras funciones ...
-
   async createMany(data: {
     raffleId: string;
     clientName: string;
     clientPhone: string;
+    clientState?: string;
     ticketNumbers: number[];
   }) {
     // 1. Verificar si alguno ya está ocupado
@@ -188,6 +187,7 @@ export class TicketsService {
     });
 
     if (!client) {
+      // Si solo lo agregaste al modelo Ticket, déjalo así.
       client = await this.prisma.client.create({
         data: {
           name: data.clientName,
@@ -196,8 +196,7 @@ export class TicketsService {
       });
     }
 
-    // 3. Crear los boletos en transacción (todos o ninguno)
-    // Usamos un bucle de promesas para crear las relaciones correctamente
+    // 3. Crear los boletos en transacción
     const result = await this.prisma.$transaction(
       data.ticketNumbers.map((num) =>
         this.prisma.ticket.create({
@@ -206,6 +205,7 @@ export class TicketsService {
             status: 'RESERVED',
             raffleId: data.raffleId,
             clientId: client.id,
+            clientState: data.clientState || 'Desconocido',
           },
         }),
       ),
